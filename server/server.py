@@ -202,6 +202,9 @@ class GameServer:
         elif msg_type == MessageType.PLAY_MOVE:
             self._handle_play_move(client_address, data)
 
+        elif msg_type == MessageType.QUEUE_INFO_REQUEST:
+            self._handle_queue_info_request(client_address)
+
         elif msg_type == MessageType.DISCONNECT:
             # Le client va se déconnecter, rien à faire ici
             pass
@@ -210,6 +213,30 @@ class GameServer:
             # Type de message non reconnu ou non autorisé pour un client
             print(f"Type de message non géré: {msg_type.name}")
             self._send_error(client_address, "Type de message non géré")
+
+    def _handle_queue_info_request(self, client_address):
+        """
+        Gère un message de type QUEUE_INFO_REQUEST.
+
+        Args:
+            client_address (tuple): Adresse du client (ip, port)
+        """
+        # Récupérer les informations sur la file d'attente
+        players_in_queue = len(self.db.get_queue())
+
+        # Compter le nombre total de joueurs connectés (incluant ceux qui ne sont pas en file d'attente)
+        total_players_online = len(self.clients)
+
+        # Compter le nombre de matchs en cours
+        self.db.cursor.execute("SELECT COUNT(*) FROM matches WHERE is_finished = 0")
+        games_in_progress = self.db.cursor.fetchone()[0]
+
+        # Envoyer les informations au client
+        self._send_message(client_address, MessageType.QUEUE_INFO_RESPONSE, {
+            "players_in_queue": players_in_queue,
+            "games_in_progress": games_in_progress,
+            "players_online": total_players_online
+        })
 
     def _handle_join_queue(self, client_address, data):
         """

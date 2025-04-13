@@ -16,6 +16,8 @@ class MessageType(Enum):
     ERROR = auto()  # Message d'erreur
     LEAVE_QUEUE = auto()  # Client quitte la file d'attente
     DISCONNECT = auto()  # Client se déconnecte
+    QUEUE_INFO_REQUEST = auto()  # Client demande des informations sur la file d'attente
+    QUEUE_INFO_RESPONSE = auto()  # Serveur répond avec des informations sur la file d'attente
 
 
 class GameResult(Enum):

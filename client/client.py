@@ -26,6 +26,10 @@ class GameClient:
         self.in_queue = False
         self.match_id = None
         self.player_number = None
+        self.players_in_queue = 0
+        self.games_in_progress = 0
+        self.players_online = 0
+        self.last_queue_request = 0
 
     def start(self):
         """Démarre le client."""
@@ -33,7 +37,8 @@ class GameClient:
         self.gui = ConnectFourGUI(
             play_callback=self._on_play,
             join_queue_callback=self._on_join_queue,
-            leave_queue_callback=self._on_leave_queue
+            leave_queue_callback=self._on_leave_queue,
+            get_queue_info_callback=self._on_get_queue_info
         )
 
         # Connecter au serveur
@@ -58,6 +63,9 @@ class GameClient:
 
             if not connected:
                 self.gui.show_error(f"Impossible de se connecter au serveur {self.host}:{self.port}")
+            else:
+                # Demander les informations de la file d'attente
+                self._request_queue_info()
 
     def _on_message_received(self, msg_type, data):
         """
@@ -85,6 +93,9 @@ class GameClient:
         elif msg_type == MessageType.GAME_END:
             self._handle_game_end(data)
 
+        elif msg_type == MessageType.QUEUE_INFO_RESPONSE:
+            self._handle_queue_info_response(data)
+
         elif msg_type == MessageType.ERROR:
             self._handle_error(data)
 
@@ -102,6 +113,9 @@ class GameClient:
             if self.gui:
                 self.gui.set_in_queue(True)
 
+            # Demander les informations mises à jour de la file d'attente
+            self._request_queue_info()
+
     def _handle_leave_queue_response(self, data):
         """
         Gère la réponse à un message LEAVE_QUEUE.
@@ -115,6 +129,9 @@ class GameClient:
             # Mettre à jour l'interface
             if self.gui:
                 self.gui.set_in_queue(False)
+
+            # Demander les informations mises à jour de la file d'attente
+            self._request_queue_info()
 
     def _handle_match_found(self, data):
         """
@@ -134,6 +151,9 @@ class GameClient:
             # Afficher un message
             if self.gui:
                 self.gui.show_info(f"Match trouvé !\nJoueur 1: {player1_name}\nJoueur 2: {player2_name}")
+
+            # Demander les informations mises à jour de la file d'attente
+            self._request_queue_info()
 
     def _handle_game_start(self, data):
         """
@@ -192,6 +212,29 @@ class GameClient:
             self.match_id = None
             self.player_number = None
 
+            # Demander les informations mises à jour de la file d'attente
+            self._request_queue_info()
+
+    def _handle_queue_info_response(self, data):
+        """
+        Gère la réponse à un message QUEUE_INFO_REQUEST.
+
+        Args:
+            data (dict): Données du message
+        """
+        players_in_queue = data.get("players_in_queue", 0)
+        games_in_progress = data.get("games_in_progress", 0)
+        players_online = data.get("players_online", 0)  # Récupérer le nombre total de joueurs
+
+        # Mettre à jour l'état local
+        self.players_in_queue = players_in_queue
+        self.games_in_progress = games_in_progress
+        self.players_online = players_online  # Stocker le nombre total
+
+        # Mettre à jour l'interface
+        if self.gui:
+            self.gui.update_queue_info(players_online, games_in_progress)
+
     def _handle_error(self, data):
         """
         Gère un message ERROR.
@@ -238,3 +281,21 @@ class GameClient:
             bool: True si la demande a été envoyée
         """
         return self.network.leave_queue()
+
+    def _on_get_queue_info(self):
+        """
+        Callback appelé quand l'interface demande des informations sur la file d'attente.
+        """
+        # Limiter la fréquence des requêtes (max 1 fois toutes les 2 secondes)
+        import time
+        current_time = time.time()
+        if current_time - self.last_queue_request >= 2:
+            self.last_queue_request = current_time
+            self._request_queue_info()
+
+    def _request_queue_info(self):
+        """
+        Demande des informations sur la file d'attente au serveur.
+        """
+        if self.network.connected:
+            self.network.request_queue_info()

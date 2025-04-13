@@ -202,3 +202,12 @@ class NetworkClient:
             "match_id": match_id,
             "column": column
         })
+
+    def request_queue_info(self):
+        """
+        Demande des informations sur la file d'attente.
+
+        Returns:
+            bool: True si la demande a été envoyée
+        """
+        return self.send_message(MessageType.QUEUE_INFO_REQUEST)
