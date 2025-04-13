@@ -211,9 +211,18 @@ class GameClient:
             # Réinitialiser l'état
             self.match_id = None
             self.player_number = None
+            self.in_queue = False  # Important: s'assurer que le joueur n'est plus en file d'attente
+
+            # Mettre à jour l'état de l'interface pour refléter que le joueur n'est plus dans la file d'attente
+            if self.gui:
+                self.gui.set_in_queue(False)
 
             # Demander les informations mises à jour de la file d'attente
             self._request_queue_info()
+
+            # Envoyer explicitement un message au serveur pour quitter la file d'attente
+            # (au cas où le joueur y serait encore côté serveur)
+            self.network.leave_queue()
 
     def _handle_queue_info_response(self, data):
         """

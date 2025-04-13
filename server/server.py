@@ -273,6 +273,9 @@ class GameServer:
         # Retirer le joueur de la file d'attente
         removed = self.db.remove_from_queue(client_address[0], client_address[1])
 
+        # Vérifier également si le joueur est dans un match actif
+        match = self.db.get_active_match_by_player(client_address[0], client_address[1])
+
         if removed:
             print(f"Joueur ({client_address[0]}:{client_address[1]}) retiré de la file d'attente")
 
@@ -281,8 +284,18 @@ class GameServer:
                 "status": "success",
                 "message": "Vous avez quitté la file d'attente"
             })
+        elif match:
+            # Le joueur n'était pas dans la file d'attente mais dans un match
+            self._send_message(client_address, MessageType.LEAVE_QUEUE, {
+                "status": "success",
+                "message": "Vous n'étiez pas dans la file d'attente (match en cours/terminé)"
+            })
         else:
-            self._send_error(client_address, "Vous n'êtes pas dans la file d'attente")
+            # Message plus informatif au lieu d'une erreur
+            self._send_message(client_address, MessageType.LEAVE_QUEUE, {
+                "status": "success",
+                "message": "Vous n'étiez pas dans la file d'attente"
+            })
 
     def _handle_play_move(self, client_address, data):
         """

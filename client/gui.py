@@ -321,6 +321,12 @@ class ConnectFourGUI:
         for name, screen in self.screens.items():
             screen.pack_forget()
 
+        # Si on retourne au menu principal depuis l'écran de jeu après une partie,
+        # s'assurer que les boutons pour rejoindre la file d'attente sont dans le bon état
+        if screen_name == "menu" and self.is_game_over:
+            self.is_game_over = False
+            self.match_id = None
+
         # Afficher l'écran demandé
         if screen_name in self.screens:
             self.screens[screen_name].pack(fill=tk.BOTH, expand=True)
@@ -341,7 +347,7 @@ class ConnectFourGUI:
             self.play_button.config(state=tk.NORMAL)
 
             # Mettre à jour les statistiques si disponibles
-            stats_text = f"Joueurs en ligne: {self.players_in_queue}, Nombre de parties: {self.games_in_progress}"
+            stats_text = f"Joueurs en ligne: {self.players_in_queue}, Parties en cours: {self.games_in_progress}"
             self.server_stats_label.config(text=stats_text, foreground=self.colors['green'])
         else:
             self.server_status_label.config(text="Non connecté au serveur", style='StatusDisconnected.TLabel')
