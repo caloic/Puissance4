@@ -1,0 +1,3 @@
+([('Puissance4_Client',
+   '/Users/loic/PycharmProjects/Puissance4/dist/Puissance4_Client',
+   'EXECUTABLE')],)
